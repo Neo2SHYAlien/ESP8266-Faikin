@@ -2687,7 +2687,7 @@ send_ha_config (void)
    }
    void addtemp (uint64_t ok, const char *tag, const char *name, const char *icon)
    {
-      if (asprintf (&topic, "homeassistant/sensor/%s%s/config", revk_id, tag) >= 0)
+      if (asprintf (&topic, "%s/sensor/%s%s/config", topicha, revk_id, tag) >= 0)
       {
          if (!ok)
             revk_mqtt_send_str (topic);
@@ -2707,7 +2707,7 @@ send_ha_config (void)
    }
    void addfreq (uint64_t ok, const char *tag, const char *name, const char *unit, const char *icon)
    {
-      if (asprintf (&topic, "homeassistant/sensor/%s%s/config", revk_id, tag) >= 0)
+      if (asprintf (&topic, "%s/sensor/%s%s/config", topicha, revk_id, tag) >= 0)
       {
          if (!ok)
             revk_mqtt_send_str (topic);
@@ -2727,7 +2727,7 @@ send_ha_config (void)
    }
    void addswitch (uint64_t ok, const char *tag, const char *name, const char *icon)
    {
-      if (asprintf (&topic, "homeassistant/switch/%s%s/config", revk_id, tag) >= 0)
+      if (asprintf (&topic, "%s/switch/%s%s/config", topicha, revk_id, tag) >= 0)
       {
          if (!ok)
             revk_mqtt_send_str (topic);
@@ -2745,7 +2745,7 @@ send_ha_config (void)
          free (topic);
       }
    }
-   if (asprintf (&topic, "homeassistant/climate/%s/config", revk_id) >= 0)
+   if (asprintf (&topic, "%s/climate/%s/config", topicha, revk_id) >= 0)
    {
       jo_t j = make ("", "mdi:thermostat");
       //jo_string (j, "name", hostname);
@@ -2851,7 +2851,7 @@ send_ha_config (void)
 #ifdef ELA
    void addhum (uint64_t ok, const char *tag, const char *name, const char *icon)
    {
-      if (asprintf (&topic, "homeassistant/sensor/%s%s/config", revk_id, tag) >= 0)
+      if (asprintf (&topic, "%s/sensor/%s%s/config", topicha, revk_id, tag) >= 0)
       {
          if (!ok)
             revk_mqtt_send_str (topic);
@@ -2871,7 +2871,7 @@ send_ha_config (void)
    }
    void addbat (uint64_t ok, const char *tag, const char *name, const char *icon)
    {
-      if (asprintf (&topic, "homeassistant/sensor/%s%s/config", revk_id, tag) >= 0)
+      if (asprintf (&topic, "%s/sensor/%s%s/config", topicha, revk_id, tag) >= 0)
       {
          if (!ok)
             revk_mqtt_send_str (topic);
@@ -2894,7 +2894,7 @@ send_ha_config (void)
    addbat (ble && bletemp && bletemp->batset, "blebat", "BLE Battery", "mdi:battery-bluetooth-variant");
 #endif
 #if 1
-   if (asprintf (&topic, "homeassistant/select/%sdemand/config", revk_id) >= 0)
+   if (asprintf (&topic, "%s/select/%sdemand/config", topicha, revk_id) >= 0)
    {
       if (!(daikin.status_known & CONTROL_demand))
          revk_mqtt_send_str (topic);
@@ -2914,7 +2914,7 @@ send_ha_config (void)
       free (topic);
    }
 #endif
-   if (asprintf (&topic, "homeassistant/sensor/%senergy/config", revk_id) >= 0)
+   if (asprintf (&topic, "%s/sensor/%senergy/config", topicha, revk_id) >= 0)
    {
       if (!(daikin.status_known & CONTROL_Wh))
          revk_mqtt_send_str (topic);
