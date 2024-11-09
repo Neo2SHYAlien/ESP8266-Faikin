@@ -372,6 +372,7 @@ set_uint8 (const char *name, uint8_t * ptr, uint64_t flag, uint8_t val)
    {
       daikin.status_known |= flag;
       daikin.status_changed = 1;
+      daikin.ha_send = 1;
    }
    if (*ptr == val)
    {                            // No change
@@ -397,6 +398,7 @@ set_int (const char *name, int *ptr, uint64_t flag, int val)
    {
       daikin.status_known |= flag;
       daikin.status_changed = 1;
+      daikin.ha_send = 1;
    }
    if (*ptr == val)
    {                            // No change
@@ -422,6 +424,7 @@ set_float (const char *name, float *ptr, uint64_t flag, float val)
    {
       daikin.status_known |= flag;
       daikin.status_changed = 1;
+      daikin.ha_send = 1;
    }
    if ((isnan(*ptr)&&isnan(val))||lroundf (*ptr * 10) == lroundf (val * 10))
    {                            // No change (allow within 0.1C)
@@ -1469,8 +1472,7 @@ mqtt_client_callback (int client, const char *prefix, const char *target, const 
    if (!strcmp (suffix, "connect") || !strcmp (suffix, "status"))
    {
       daikin.status_report = 1; // Report status on connect
-      if (haenable)
-         daikin.ha_send = 1;
+      daikin.ha_send = 1;
    }
    if (!strcmp (suffix, "send") && jo_here (j) == JO_STRING)
    {
@@ -2673,6 +2675,8 @@ static void
 send_ha_config (void)
 {
    daikin.ha_send = 0;
+   if (!haenable)
+      return;
    char *hastatus = revk_topic (topicstate, NULL, NULL);
    char *cmd = revk_topic (topiccommand, NULL, NULL);
    char *topic;
@@ -3301,8 +3305,7 @@ app_main ()
          daikin.control_changed = 0;
          daikin.online = 1;
       }
-      if (haenable)
-         daikin.ha_send = 1;
+      daikin.ha_send = 1;
       memset (&s21, 0, sizeof (s21));   // Clear all S21 message status
       int polls = 0;
       do
@@ -3327,8 +3330,7 @@ app_main ()
                   if (!strcmp (e->name, autob))
                   {
                      bletemp = e;
-                     if (haenable)
-                        daikin.ha_send = 1;
+                     daikin.ha_send = 1;
                      break;
                   }
             }
