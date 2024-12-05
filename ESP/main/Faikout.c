@@ -2230,6 +2230,7 @@ legacy_web_set_holiday (httpd_req_t * req)
    else
    {
       // TODO - ignore for now
+      jo_free (&j);
    }
    return legacy_simple_response (req, err);
 }
@@ -2627,6 +2628,7 @@ legacy_web_set_special_mode (httpd_req_t * req)
       default:
          err = "Unknown kind";
       }
+      jo_free (&j);
    }
    return legacy_simple_response (req, err);
 }
