@@ -1553,6 +1553,7 @@ mqtt_client_callback (int client, const char *prefix, const char *target, const 
       float env = NAN;
       float min = NAN;
       float max = NAN;
+      float margin = NAN;
       jo_type_t t = jo_next (j);        // Start object
       while (t == JO_TAG)
       {
@@ -1563,6 +1564,8 @@ mqtt_client_callback (int client, const char *prefix, const char *target, const 
          jo_strncpy (j, val, sizeof (val));
          if (!strcmp (tag, "env"))
             env = strtof (val, NULL);
+         else if (!strcmp (tag, "margin"))
+            margin = strtof (val, NULL);
          else if (!strcmp (tag, "target"))
          {
             if (jo_here (j) == JO_ARRAY)
@@ -1594,7 +1597,11 @@ mqtt_client_callback (int client, const char *prefix, const char *target, const 
 #include "accontrols.m"
          t = jo_skip (j);
       }
-
+      if (!isnan (margin))
+      {
+         min -= margin / 2;
+         max += margin / 2;
+      }
       xSemaphoreTake (daikin.mutex, portMAX_DELAY);
       daikin.controlvalid = uptime () + tcontrol;
       if (!autor)
@@ -3106,7 +3113,7 @@ revk_state_extra (jo_t j)
    else if (daikin.status_known & CONTROL_inlet)
       jo_litf (j, "temp", "%.2f", daikin.inlet);
    if (daikin.status_known & CONTROL_home)
-      jo_litf (j, "achome", "%.2f", daikin.home);      // The actual home temp
+      jo_litf (j, "achome", "%.2f", daikin.home);       // The actual home temp
    if ((daikin.status_known & CONTROL_home) && (daikin.status_known & CONTROL_inlet))
       jo_litf (j, "inlet", "%.2f", daikin.inlet);       // Both so report inlet as well
    if (daikin.status_known & CONTROL_outside)
@@ -3282,6 +3289,7 @@ revk_web_extra (httpd_req_t * req, int page)
 void
 app_main ()
 {
+   ESP_LOGE (TAG, "Started");
 #ifdef  CONFIG_IDF_TARGET_ESP32S3
    {                            // All unused input pins pull down
       gpio_config_t c = {.pull_down_en = 1,.mode = GPIO_MODE_DISABLE };
