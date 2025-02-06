@@ -3277,9 +3277,7 @@ revk_web_extra (httpd_req_t * req, int page)
    revk_web_setting (req, "Dark mode LED", "dark");
    if (!daikin.remote)
    {
-      revk_web_setting (req, "No Faikin auto mode", "nofaikoutauto");
-      if (!nofaikoutauto)
-         revk_web_setting (req, "BLE Sensors", "ble");
+      revk_web_setting (req, "Hide Faikin auto mode", "nofaikoutauto");
    }
    revk_web_setting (req, "Debug", "debug");
 }
