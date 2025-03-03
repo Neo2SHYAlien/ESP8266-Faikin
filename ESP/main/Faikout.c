@@ -2847,7 +2847,8 @@ send_ha_config (void)
          {
             jo_t j = make (tag, icon);
             jo_string (j, "name", tag);
-            jo_string (j, "dev_cla", "frequency");
+            if (!strcmp (unit, "Hz"))
+               jo_string (j, "dev_cla", "frequency");
             jo_string (j, "state_class", "measurement");
             jo_string (j, "stat_t", hastatus);
             jo_string (j, "unit_of_meas", unit);
