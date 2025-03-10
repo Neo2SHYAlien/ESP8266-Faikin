@@ -3143,7 +3143,7 @@ send_ha_config (void)
       revk_mqtt_send (NULL, 1, topic, &j);
       free (topic);
    }
-   ha_config_sensor ("ram",.name = "RAM",.field = "ram",.unit = "B",.delete = !haram);
+   ha_config_sensor ("ram",.name = "RAM",.field = "mem",.unit = "B",.delete = !haram);
    ha_config_sensor ("spi",.name = "PSRAM",.field = "spi",.unit = "B",.delete = !haram);
    free (cmd);
    free (hastatus);
