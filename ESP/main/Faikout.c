@@ -15,6 +15,7 @@ static const char TAG[] = "Faikin";
 #include "cn_wired.h"
 #include "cn_wired_driver.h"
 #include "daikin_s21.h"
+#include "halib.h"
 
 // Macros for setting values
 // They set new values for parameters inside the big "daikin" state struct
@@ -148,10 +149,10 @@ struct
    uint8_t loopback:1;
    uint8_t dumping:1;
    uint8_t frost:1;             // Frost override
+   uint8_t protocol_set:1;
 } b = { 0 };
 
 static httpd_handle_t webserver = NULL;
-static uint8_t protocol_set = 0;        // protocol confirmed
 static uint8_t proto = 0;
 
 static int
@@ -772,7 +773,7 @@ daikin_s21_response (const uint8_t * cmd_buf, int len, uint8_t * payload)
 void
 protocol_found (void)
 {
-   protocol_set = 1;
+   b.protocol_set = 1;
    if (proto != protocol)
    {
       jo_t j = jo_object_alloc ();
@@ -813,7 +814,7 @@ daikin_cn_wired_incoming_packet (const uint8_t * payload)
 
       // When autodetecting a protocol, we only have 2 retries before deciding
       // that it's not CN_WIRED
-      if (!protocol_set && ++cnw_retries == 2)
+      if (!b.protocol_set && ++cnw_retries == 2)
       {
          cnw_retries = 0;
          daikin.talking = 0;
@@ -823,7 +824,7 @@ daikin_cn_wired_incoming_packet (const uint8_t * payload)
    // We're now online
    report_uint8 (online, 1);
 
-   if (!protocol_set)
+   if (!b.protocol_set)
    {
       // Protocol autodetection complete
       protocol_found ();
@@ -1109,7 +1110,7 @@ daikin_as_command (int len, uint8_t * buf)
          return RES_NAK;
       return RES_BAD;
    }
-   if (*res == buf[1] && !protocol_set)
+   if (*res == buf[1] && !b.protocol_set)
       protocol_found ();
    daikin_as_response (len, res);
    return RES_OK;
@@ -1293,6 +1294,11 @@ daikin_s21_command (uint8_t cmd, uint8_t cmd2, int payload_len, char *payload)
       {                            // Report error and return RES_BAD - also pause/flush
          jo_base16 (j, "data", buf, rxlen);
          revk_error ("comms", &j);
+      if (!b.protocol_set)
+      {
+         sleep (1);
+         uart_flush (uart);
+      }
          return RES_BAD;
       }
       // Check checksum
@@ -1322,7 +1328,7 @@ daikin_s21_command (uint8_t cmd, uint8_t cmd2, int payload_len, char *payload)
       }
       b.loopback = 0;
       // If we've got an STX, S21 protocol is now confirmed; we won't change it any more
-      if (buf[0] == STX && !protocol_set)
+      if (buf[0] == STX && !b.protocol_set)
          protocol_found ();
       // An expected S21 reply contains the first character of the command
       // incremented by 1, the second character is left intact
@@ -1424,14 +1430,14 @@ daikin_x50a_command (uint8_t cmd, int txlen, uint8_t * payload)
          ESP_LOGE (TAG, "Loopback");
          b.loopback = 1;
          revk_blink (0, 0, "RGB");
+         jo_t j = jo_comms_alloc ();
+         jo_bool (j, "loopback", 1);
+         revk_error ("comms", &j);
       }
-      jo_t j = jo_comms_alloc ();
-      jo_bool (j, "loopback", 1);
-      revk_error ("comms", &j);
       return;
    }
    b.loopback = 0;
-   if (buf[0] == 0x06 && !protocol_set && buf[1] != 0xFF)
+   if (buf[0] == 0x06 && !b.protocol_set && buf[1] != 0xFF)
       protocol_found ();
    if (buf[1] == 0xFF)
    {                            // Error report
@@ -2052,8 +2058,8 @@ web_root (httpd_req_t * req)
                   "g('top').className='on';"
                   "o=JSON.parse(rt);"
                   "b('power',o.power);" //
-                  "h('offline',!o.online);"     //
-                  "h('loopback',o.loopback);"   //
+                  "h('offline',!o.online&&o.protocol!='loopback');"     //
+                  "h('loopback',o.protocol=='loopback');"       //
                   "h('control',o.control);"     //
                   "h('slave',o.slave);" //
                   "h('remote',!o.remote);"      //
@@ -2117,7 +2123,7 @@ web_root (httpd_req_t * req)
                      "window.setInterval(c, 1000);"
                   "}"
                   "</script>", fahrenheit ? "Math.round(10*((v*9/5)+32))/10+'℉'" : "v+'℃'");
-   return revk_web_foot (req, 0, websettings, protocol_set ? proto_name () : NULL);
+   return revk_web_foot (req, 0, websettings, b.protocol_set ? proto_name () : NULL);
 }
 
 // Macros with error collection for HTTP
@@ -3137,6 +3143,8 @@ send_ha_config (void)
       revk_mqtt_send (NULL, 1, topic, &j);
       free (topic);
    }
+   ha_config_sensor ("ram",.name = "RAM",.field = "ram",.unit = "B",.delete = !haram);
+   ha_config_sensor ("spi",.name = "PSRAM",.field = "spi",.unit = "B",.delete = !haram);
    free (cmd);
    free (hastatus);
 }
@@ -3352,7 +3360,7 @@ revk_web_extra (httpd_req_t * req, int page)
       revk_web_setting_info (req, "Note, HA config sent (%s/…)", "homeassistant");
    else if (haenable)
       revk_web_setting_info (req, "Note, HA config not yet sent%s%s%s%s", *mqtthost[0] ? "" : " (no MQTT config)",
-                             daikin.ha_send ? " (send pending)" : "", protocol_set ? "" : " (protocol not set)",
+                             daikin.ha_send ? " (send pending)" : "", b.protocol_set ? "" : " (protocol not set)",
                              daikin.talking ? "" : " (a/c not talking)");
    revk_web_setting (req, "Fahrenheit", "fahrenheit");
    revk_web_setting (req, "Text rather than icons", "noicons");
@@ -3466,7 +3474,7 @@ app_main ()
    snprintf (daikin.model, sizeof (daikin.model), "%s", model); // default model
    proto = protocol;
    if (protofix)
-      protocol_set = 1;         // Fixed protocol - do not change
+      b.protocol_set = 1;       // Fixed protocol - do not change
    else
       proto--;                  // We start by moving forward if protocol not set
    while (1)
@@ -3474,7 +3482,7 @@ app_main ()
       // We're (re)starting comms from scratch, so set "talking" flag.
       // This signals protocol integrity and actually enables communicating with the AC.
       static uint8_t backoff = 1;
-      if (!protocol_set && !b.loopback)
+      if (!b.protocol_set && !b.loopback)
       {                         // Scanning protocols - more to next protocol
          proto++;
          if (proto >= PROTO_TYPE_MAX * PROTO_SCALE)
@@ -3507,10 +3515,15 @@ app_main ()
             daikin_x50a_command (0xBA, 0, NULL);
             daikin_x50a_command (0xBB, 0, NULL);
          }
+         if (b.protocol_set && daikin.online != daikin.talking)
+         {
+            daikin.online = daikin.talking;
+            daikin.status_changed = 1;
+         }
       } else
       {                         // Mock configuration for interface testing
          proto = PROTO_TYPE_S21 * PROTO_SCALE;
-         protocol_set = 1;
+         b.protocol_set = 1;
          daikin.control_changed = 0;
          daikin.online = 1;
       }
@@ -4263,7 +4276,7 @@ app_main ()
          }
          // End of local auto controls
 
-         if (reporting && !revk_link_down () && protocol_set)
+         if (reporting && !revk_link_down () && b.protocol_set)
          {                      // Environment logging
             time_t clock = time (0);
             static time_t last = 0;
@@ -4297,7 +4310,7 @@ app_main ()
                }
             }
          }
-         if (daikin.ha_send && (b.loopback || (polls > 1 && protocol_set && daikin.talking)))
+         if (daikin.ha_send && (b.loopback || (polls > 1 && b.protocol_set && daikin.talking)))
          {
             send_ha_config ();
             ha_status ();       // Update status now sent
