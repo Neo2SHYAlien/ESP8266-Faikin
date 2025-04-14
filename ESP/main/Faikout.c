@@ -1469,6 +1469,7 @@ auto_mode_control_item(const char *tag, const char *val, jo_t s)
       if (!s)
          s = jo_object_alloc ();
       jo_bool (s, tag, *val == 't');
+      daikin.status_changed = 1;
    }
    if (!strcmp (tag, "autot") || !strcmp (tag, "autor"))
    {                         // Stored settings
@@ -1726,6 +1727,8 @@ mqtt_client_callback (int client, const char *prefix, const char *target, const 
          jo_bool (s, "streamer", checkbool ());
       if (!strcmp (suffix, "led"))
          jo_bool (s, "led", checkbool ());
+      if (!strcmp (suffix, "autoe"))
+         jo_bool (s, "autoe", checkbool ());
    }
    jo_close (s);
    jo_rewind (s);
@@ -3218,6 +3221,8 @@ revk_state_extra (jo_t j)
                  daikin.comfort ? "C" : daikin.swingh & daikin.swingv ? "H+V" : daikin.swingh ? "H" : daikin.swingv ? "V" : daikin.sleep ? "SLP" : "off");
    if (daikin.status_known & (CONTROL_econo | CONTROL_powerful))
       jo_string (j, "preset", daikin.econo ? "eco" : daikin.powerful ? "boost" : nohomepreset ? "none" : "home");       // Limited modes
+   if (haswitches)
+      jo_bool (j, "autoe", autoe);
 }
 
 int faikin_log_putc(int c) {
