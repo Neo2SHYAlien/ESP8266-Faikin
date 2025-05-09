@@ -572,7 +572,7 @@ daikin_s21_response (const uint8_t * cmd_buf, int len, uint8_t * payload)
       case '5':                // 'G5' - swing status
          if (check_length (cmd_buf, S21_COMMAND_LEN, len, 1, payload))
          {
-            if (!noswingw)
+            if (!noswingv)
                report_bool (swingv, payload[0] & 1);
             if (!noswingh)
                report_bool (swingh, payload[0] & 2);
@@ -3209,7 +3209,7 @@ app_main ()
          daikin.status_known |= CONTROL_sensor;
       if (!noquiet)
          daikin.status_known |= CONTROL_quiet;
-      if (!noswingw)
+      if (!noswingv)
          daikin.status_known |= CONTROL_swingv;
       if (!noswingh) 
          daikin.status_known |= CONTROL_swingh;
