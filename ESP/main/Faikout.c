@@ -3470,6 +3470,9 @@ app_main ()
                //if(s21extra)poll (F, U, 02);
                //if(s21extra)poll (F, U, 04);
                
+               if (s21.rgfan)
+                  poll (R, G,); // Needed to confirm fan changes.
+
                static uint8_t rcycle = 0;       // R polling one per cycle
                switch (rcycle++)
                {
@@ -3490,9 +3493,12 @@ app_main ()
                   break;
                case 5:
                   poll (R, N,); // Angle
+                  if (!s21extra && s21.rgfan)
+                     rcycle = 0;        // End as RG done anyway
                   break;
                case 6:
-                  poll (R, G,);      // Fan
+                  if (!s21.rgfan)
+                     poll (R, G,);      // Fan
                   if (!s21extra)
                      rcycle = 0;        // End of normal R polling - the following are debug only
                   break;
