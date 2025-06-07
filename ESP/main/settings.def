@@ -104,6 +104,8 @@ u8	auto.ptemp	0.5		.live=1	.decimal=1	.old="autop10"	// Auto power on/off by tem
 bit	auto.lcontrol	0		.live=1					// Auto toggle on/off LED based on current HVAC action
 
 bit	thermostat			.live=1					// Faikin auto simple thermostat mode (heat to max, cool to min)
+s	auto.topic								// Topic to follow for reference temperature for Faikin auto
+s	auto.payload								// JSON field in payload of above topic for reference temp
 
 
 u8	t.min		16		.live=1					// Min temp setting of system
