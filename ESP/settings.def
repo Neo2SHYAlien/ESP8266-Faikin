@@ -51,7 +51,7 @@ s	ha.domain	"local"							// Local domain for HA links
 bit	ble									// Enable BLE
 #endif
 
-u8	fanstep									// Fan steps
+u8	fanstep									// Fan steps (1 or 2, 0 for auto)
 
 bit	lockmode								// Lock mode in Faikin auto
 
