@@ -3396,11 +3396,11 @@ app_main ()
                if (!s21.FY00.ack && !s21.F8.ack)
                   poll (F, Y, 2, 00);  // One time static value
                poll (F, 1, 0,);
-               if (debug)
+               if (s21extra)
                   poll (F, 2, 0,);
-               if (s21.F6.bad || debug)
+               if (s21.F6.bad || s21extra)
                   poll (F, 3, 0,);      // If F6 works we assume we don't need F3
-               if (debug)
+               if (s21extra)
                   poll (F, 4, 0,);
                poll (F, 5, 0,);
                poll (F, 6, 0,);
@@ -3408,29 +3408,29 @@ app_main ()
                if (!s21.FY00.ack && !s21.F8.ack)
                   poll (F, 8, 0,);      // One time static value
                poll (F, 9, 0,);
-               if (debug)
+               if (s21extra)
                   poll (F, A, 0,);
-               if (debug)
+               if (s21extra)
                   poll (F, B, 0,);
                if (!s21.FC.ack)
                   poll (F, C, 0,);      // One time static value
-               if (debug)
+               if (s21extra)
                   poll (F, G, 0,);
-               if (debug)
+               if (s21extra)
                   poll (F, K, 0,);
                poll (F, M, 0,);
-               if (debug)
+               if (s21extra)
                   poll (F, N, 0,);
-               if (debug)
+               if (s21extra)
                   poll (F, P, 0,);
-               if (debug)
+               if (s21extra)
                   poll (F, Q, 0,);
-               if (debug)
+               if (s21extra)
                   poll (F, S, 0,);
-               if (debug)
+               if (s21extra)
                   poll (F, T, 0,);
-               //if(debug)poll (F, U, 2, 02);
-               //if(debug)poll (F, U, 2, 04);
+               //if(s21extra)poll (F, U, 2, 02);
+               //if(s21extra)poll (F, U, 2, 04);
 
                static uint8_t rcycle = 0;       // R polling one per cycle
                switch (rcycle++)
@@ -3455,7 +3455,7 @@ app_main ()
                   break;
                case 6:
                   poll (R, G, 0,);      // Fan
-                  if (!debug)
+                  if (!s21extra)
                      rcycle = 0;        // End of normal R polling - the following are debug only
                   break;
                case 7:
