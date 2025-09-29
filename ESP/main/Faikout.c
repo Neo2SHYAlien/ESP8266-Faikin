@@ -1076,6 +1076,16 @@ is_valid_s21_response (const uint8_t * buf, int rxlen, uint8_t cmd, uint8_t cmd2
       buf[S21_CMD0_OFFSET] == cmd && buf[S21_CMD1_OFFSET] == cmd2;
 }
 
+static char
+s21_response_letter (char cmd)
+{                               // What is expected as a response
+   if (cmd == 'A')
+      return 'C';
+   if (cmd == 'M' || cmd == 'V')
+      return cmd;
+   return cmd + 1;
+}
+
 static jo_t
 jo_s21_alloc (char cmd, char cmd2, const char *payload, int payload_len)
 {
@@ -1261,16 +1271,17 @@ daikin_s21_command (uint8_t cmd, uint8_t cmd2, int payload_len, char *payload)
          protocol_found ();
       // An expected S21 reply contains the first character of the command
       // incremented by 1, the second character is left intact
-      if (!snoop && !is_valid_s21_response (buf, rxlen, cmd + 1, cmd2))
+      char r = s21_response_letter (cmd);
+      if (!snoop && !is_valid_s21_response (buf, rxlen, r, cmd2))
       {                            // Malformed response, no proper S21
          jo_t j = jo_comms_alloc ();
          jo_stringf (j, "cmd", "%c%c", cmd, cmd2);
          if (buf[0] != STX)
             jo_bool (j, "badhead", 1);
-         if (buf[1] != cmd + 1 || buf[2] != cmd2)
+         if (buf[1] != r || buf[2] != cmd2)
             jo_bool (j, "mismatch", 1);
          s21_bad (j);
-         if (buf[1] != cmd + 1 || buf[2] != cmd2)
+         if (buf[1] != r || buf[2] != cmd2)
             continue;              // We got an extra unexpected message, so wait for another
       }
       break;
