@@ -1080,8 +1080,11 @@ static jo_t
 jo_s21_alloc (char cmd, char cmd2, const char *payload, int payload_len)
 {
    jo_t j = jo_comms_alloc ();
-   jo_stringf (j, "cmd", "%c%c", cmd, cmd2);
-   if (payload_len)
+   if (payload_len < 0)
+      jo_stringf (j, "cmd", "%c", cmd);
+   else
+      jo_stringf (j, "cmd", "%c%c", cmd, cmd2);
+   if (payload_len >= 0)
    {
       jo_base16 (j, "payload", payload, payload_len);
       jo_stringn (j, "text", payload, payload_len);
@@ -1099,7 +1102,7 @@ daikin_s21_command (uint8_t cmd, uint8_t cmd2, int payload_len, char *payload)
       jo_t j = jo_s21_alloc (cmd, cmd2, payload, payload_len);
       revk_info (daikin.talking || protofix ? "tx" : "cannot-tx", &j);
    }
-   if (!daikin.talking && !protofix)
+   if ((!daikin.talking && !protofix) || payload_len < -1)
       return RES_WAIT;          // Failed
    uint8_t buf[256],
      temp;
@@ -1108,8 +1111,9 @@ daikin_s21_command (uint8_t cmd, uint8_t cmd2, int payload_len, char *payload)
    {                            // Send
       buf[S21_STX_OFFSET] = STX;
       buf[S21_CMD0_OFFSET] = cmd;
-      buf[S21_CMD1_OFFSET] = cmd2;
-      if (payload_len)
+      if (payload_len >= 0)
+         buf[S21_CMD1_OFFSET] = cmd2;
+      if (payload_len > 0)
          memcpy (buf + S21_PAYLOAD_OFFSET, payload, payload_len);
       buf[S21_PAYLOAD_OFFSET + payload_len] = s21_checksum (buf, txlen);
       buf[S21_PAYLOAD_OFFSET + payload_len + 1] = ETX;
@@ -1118,7 +1122,10 @@ daikin_s21_command (uint8_t cmd, uint8_t cmd2, int payload_len, char *payload)
          jo_t j = jo_comms_alloc ();
          jo_base16 (j, "dump", buf, txlen);
          char c[3] = { cmd, cmd2 };
-         jo_stringn (j, c, payload, payload_len);
+         if (payload_len >= 0)
+            jo_stringn (j, c, payload, payload_len);
+         else
+            jo_null (j, c);
          revk_info ("tx", &j);
       }
       uart_write_bytes (uart, (char *)buf, txlen);
