@@ -1838,7 +1838,7 @@ web_root (httpd_req_t * req)
                   "<p id=control style='display:none'>✷ Automatic control means some functions are limited.</p>"      //
                   "<p id=antifreeze style='display:none'>❄ System is in anti-freeze now, so cooling is suspended.</p>");
 
-   if (autor || ble_sensor_connected () || (!nofaikinauto && !daikin.remote))
+   if (autor || ble_sensor_connected () || (!nofaikoutauto && !daikin.remote))
    {
       void addnote (const char *note)
       {
@@ -3118,8 +3118,8 @@ revk_web_extra (httpd_req_t * req, int page)
    revk_web_setting (req, "Dark mode LED", "dark");
    if (!daikin.remote)
    {
-      revk_web_setting (req, "No Faikin auto mode", "nofaikinauto");
-      if (!nofaikinauto)
+      revk_web_setting (req, "No Faikin auto mode", "nofaikoutauto");
+      if (!nofaikoutauto)
          revk_web_setting (req, "BLE Sensors", "ble");
    }
    revk_web_setting (req, "Debug", "debug");
