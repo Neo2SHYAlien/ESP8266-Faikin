@@ -650,11 +650,16 @@ daikin_s21_response (const uint8_t * cmd_buf, int len, uint8_t * payload)
          }
          break;
       case 'M':                // Power meter
-         report_int (Wh, s21_decode_hex_sensor (payload) * 100);        // 100Wh units
+         if (check_length (cmd, cmd2, len, 4, payload))
+            report_int (Whoutside, s21_decode_hex_sensor (payload) * 100);      // 100Wh units
          break;
       case 'Y':
       case 'U':
-         if (check_length (cmd_buf, S21_COMMAND_LEN, len, 2, payload))
+         if (cmd == 'U' && len == 8)
+         {                      // Per device power (v1, 8-byte payload)
+            report_int (Whcooling, s21_decode_hex_sensor (payload) * 100);      // 100Wh units
+            report_int (Whheating, s21_decode_hex_sensor (payload + 4) * 100);  // 100Wh units
+         } else if (check_length (cmd_buf, S21_COMMAND_LEN, len, 2, payload))
          {
             // These are known v3 responses, command length = 4
             return daikin_s21_v3_response (cmd_buf, len - 2, payload + 2);
@@ -2490,10 +2495,10 @@ static esp_err_t
 legacy_web_get_year_power (httpd_req_t * req)
 {
    jo_t j = legacy_ok ();
-   jo_string (j, "curr_year_heat", "0/0/0/0/0/0/0/0/0/0/0/0");
+   jo_stringf (j, "curr_year_heat", "%u/0/0/0/0/0/0/0/0/0/0/0", daikin.Whheating / 100);        // Bodge, does not resent each year yet
    jo_string (j, "prev_year_heat", "0/0/0/0/0/0/0/0/0/0/0/0");
-   jo_string (j, "curr_year_cool", "0/0/0/0/0/0/0/0/0/0/0/0");
-   jo_string (j, "prevr_year_cool", "0/0/0/0/0/0/0/0/0/0/0/0");
+   jo_stringf (j, "curr_year_cool", "%u/0/0/0/0/0/0/0/0/0/0/0", daikin.Whcooling / 100);
+   jo_string (j, "prevyear_cool", "0/0/0/0/0/0/0/0/0/0/0/0");
    return legacy_send (req, &j);
 }
 
@@ -2969,22 +2974,25 @@ send_ha_config (void)
       free (topic);
    }
 #endif
-   if (asprintf (&topic, "homeassistant/sensor/%senergy/config", revk_id) >= 0)
+   void addwh (uint64_t ok, const char *tag, const char *name, const char *icon)
    {
-      if (!(daikin.status_known & CONTROL_Wh))
-         revk_mqtt_send_str (topic);
-      else
+      if (asprintf (&topic, "%s/sensor/%s%s/config", topicha, revk_id, tag) >= 0)
       {
-         jo_t j = make ("energy", NULL);
-         jo_string (j, "name", "Lifetime energy");
-         jo_string (j, "dev_cla", "energy");
-         jo_string (j, "stat_t", hastatus);
-         jo_string (j, "unit_of_meas", "kWh");
-         jo_string (j, "state_class", "total_increasing");
-         jo_stringf (j, "val_tpl", "{{(value_json.Wh|float)/1000}}");
-         revk_mqtt_send (NULL, 1, topic, &j);
+         if (!ok)
+            revk_mqtt_send_str (topic);
+         else
+         {
+            jo_t j = make ("energy", icon);
+            jo_string (j, "name", name);
+            jo_string (j, "dev_cla", "energy");
+            jo_string (j, "stat_t", hastatus);
+            jo_string (j, "unit_of_meas", "kWh");
+            jo_string (j, "state_class", "total_increasing");
+            jo_stringf (j, "val_tpl", "{{(value_json.Wh|float)/1000}}");
+            revk_mqtt_send (NULL, 1, topic, &j);
+         }
+         free (topic);
       }
-      free (topic);
    }
    void addw (uint64_t ok, const char *tag, const char *name, const char *icon)
    {
@@ -3007,6 +3015,10 @@ send_ha_config (void)
       }
    }
    addw (daikin.status_known & CONTROL_consumption, "consumption", "Power consumption", NULL);
+   addwh (daikin.status_known & CONTROL_Whoutside, "energy", "Lifetime outside energy", NULL);
+   addwh (daikin.status_known & CONTROL_Whheating, "energyheat", "Lifetime heating energy", NULL);
+   addwh (daikin.status_known & CONTROL_Whcooling, "energycool", "Lifetime cooling energy", NULL);
+
    free (cmd);
    free (hastatus);
 }
@@ -3046,8 +3058,12 @@ revk_state_extra (jo_t j)
       jo_litf (j, "liquid", "%.2f", daikin.liquid);
    if (daikin.status_known & CONTROL_demand)
       jo_int (j, "demand", daikin.demand);
-   if ((daikin.status_known & CONTROL_Wh) && daikin.Wh)
-      jo_int (j, "Wh", daikin.Wh);
+   if ((daikin.status_known & CONTROL_Whoutside) && daikin.Whoutside)
+      jo_int (j, "Wh", daikin.Whoutside);
+   if ((daikin.status_known & CONTROL_Whheating) && daikin.Whheating)
+      jo_int (j, "Wh-heat", daikin.Whheating);
+   if ((daikin.status_known & CONTROL_Whcooling) && daikin.Whcooling)
+      jo_int (j, "Wh-cool", daikin.Whcooling);
    if ((daikin.status_known & CONTROL_consumption))
       jo_int (j, "consumption", daikin.consumption);
    if (daikin.status_known & CONTROL_fanrpm)
@@ -3519,7 +3535,8 @@ app_main ()
                if (s21.rgfan)
                   poll (R, G,); // Needed to confirm fan changes.
 
-               static uint8_t rcycle = 0;       // R polling one per cycle
+               // R polling one per cycle
+               static uint8_t rcycle = 0;
                switch (rcycle++)
                {
                case 0:
