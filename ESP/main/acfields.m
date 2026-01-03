@@ -39,5 +39,6 @@ t(inlet)
 t(liquid)
 i(anglev)
 i(Wh)
+i(consumption)
 
 #include "accontrols.m"

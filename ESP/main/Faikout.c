@@ -53,6 +53,7 @@ struct
    poll_t FQ;
    poll_t FS;
    poll_t FT;
+   poll_t FX60;
    poll_t RD;
    poll_t RG;
    poll_t RI;
@@ -638,6 +639,10 @@ daikin_s21_response (const uint8_t * cmd_buf, int len, uint8_t * payload)
             // These are known v3 responses, command length = 4
             return daikin_s21_v3_response (cmd_buf, len - 2, payload + 2);
          }
+         break;
+      case 'X':
+         if (payload[0] == '6' && payload[1] == '0' && check_length (cmd, cmd2, len, 6, payload))
+            report_int (consumption, s21_decode_hex_sensor (payload + 2) * 10);      // Seems to be 10W units
          break;
       }
    if (cmd == 'S')
@@ -1960,7 +1965,7 @@ web_root (httpd_req_t * req)
                   "n('autot',o.autot);" //
                   "s('Tautot',(o.autot?cf(o.autot):''));"       //
                   "s('0/1',(o.slave?'❋':'')+(o.antifreeze?'❄':''));"        //
-                  "s('Fan',(o.fanrpm?o.fanrpm+'RPM':'')+(o.antifreeze?'❄':'')+(o.control?'✷':''));" //
+                  "s('Fan',(o.antifreeze?'❄':'')+(o.control?'✷':'')+(o.fanrpm?' '+o.fanrpm+'RPM':'')+(o.consumption?' '+o.consumption+'W':''));"  //
                   "e('fan',o.fan);"     //
                   "if(o.shutdown){"
                      "s('shutdown','Restarting: '+o.shutdown);"
@@ -2938,6 +2943,27 @@ send_ha_config (void)
       }
       free (topic);
    }
+   void addw (uint64_t ok, const char *tag, const char *name, const char *icon)
+   {
+      if (asprintf (&topic, "homeassistant/sensor/%s%s/config", revk_id, tag) >= 0)
+      {
+         if (!ok)
+            revk_mqtt_send_str (topic);
+         else
+         {
+            jo_t j = make (tag, icon);
+            jo_string (j, "name", name);
+            jo_string (j, "dev_cla", "power");
+            jo_string (j, "stat_t", hastatus);
+            jo_string (j, "unit_of_meas", "W");
+            jo_string (j, "state_class", "total_increasing");
+            jo_stringf (j, "val_tpl", "{{(value_json.%s|float)/1000}}", tag);
+            revk_mqtt_send (NULL, 1, topic, &j);
+         }
+         free (topic);
+      }
+   }
+   addw (daikin.status_known & CONTROL_consumption, "consumption", "Power consumption", NULL);
    free (cmd);
    free (hastatus);
 }
@@ -2979,6 +3005,8 @@ revk_state_extra (jo_t j)
       jo_int (j, "demand", daikin.demand);
    if ((daikin.status_known & CONTROL_Wh) && daikin.Wh)
       jo_int (j, "Wh", daikin.Wh);
+   if ((daikin.status_known & CONTROL_consumption))
+      jo_int (j, "consumption", daikin.consumption);
    if (daikin.status_known & CONTROL_fanrpm)
    {
       if (hafanrpm)
@@ -3429,6 +3457,8 @@ app_main ()
                   poll (F, S, 0,);
                if (s21extra)
                   poll (F, T, 0,);
+               if (s21extra)
+                  poll (F, X, 2, 60);   // Inside power (GX60)
                //if(s21extra)poll (F, U, 2, 02);
                //if(s21extra)poll (F, U, 2, 04);
 
