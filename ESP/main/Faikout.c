@@ -66,6 +66,7 @@ struct
    s21poll_t RX;
    s21poll_t Ra;
    s21poll_t Rd;
+   s21poll_t Re;
    uint8_t rgfan:1;             // Use RG for fan
 } s21 = { 0 };
 
@@ -698,7 +699,7 @@ daikin_s21_response (const uint8_t * cmd_buf, int len, uint8_t * payload)
                break;
             }
          }
-      } else if (cmd2 == 'L' || cmd2 == 'd' || cmd2 == 'D' || cmd2 == 'N' || cmd2 == 'M')
+      } else if (cmd2 == 'L' || cmd2 == 'd' || cmd2 == 'D' || cmd2 == 'N' || cmd2 == 'M' || cmd2 == 'e')
       {                         // These responses are always only 3 bytes long
          if (check_length (cmd_buf, S21_COMMAND_LEN, len, 3, payload))
          {
@@ -713,6 +714,9 @@ daikin_s21_response (const uint8_t * cmd_buf, int len, uint8_t * payload)
                break;
             case 'N':          // Angle vertical swing
                report_int (anglev, v);
+               break;
+            case 'e':          // Humidity
+               report_float (hum, v);
                break;
             }
          }
@@ -1842,6 +1846,8 @@ web_root (httpd_req_t * req)
       addt ("Inlet", "Inlet temperature");
    if (daikin.status_known & CONTROL_home)
       addt ("Home", "Inlet temperature");
+   if (daikin.status_known & CONTROL_hum)
+      addt ("Humidity", "Indoor humidity");
    if (daikin.status_known & CONTROL_liquid)
       addt ("Liquid", "Liquid coolant temperature");
    if (daikin.status_known & CONTROL_outside)
@@ -2003,6 +2009,7 @@ web_root (httpd_req_t * req)
                   "t('Liquid',o.liquid);"       //
                   "if(o.ble)t('BLE',o.ble.temp);"       //
                   "if(o.ble)s('Hum',o.ble.hum?o.ble.hum+'%%':'');"      //
+                  "s('Humidity',o.hum+'%%');"       //
                   "n('demand',o.demand);"       //
                   "s('Tdemand',(o.demand!=undefined?o.demand+'%%':'---'));"     //
                   "n('temp',o.temp);"   //
@@ -2770,6 +2777,26 @@ send_ha_config (void)
          free (topic);
       }
    }
+   void addhum (uint64_t ok, const char *tag, const char *name, const char *icon)
+   {
+      if (asprintf (&topic, "%s/sensor/%s%s/config", topicha, revk_id, tag) >= 0)
+      {
+         if (!ok)
+            revk_mqtt_send_str (topic);
+         else
+         {
+            jo_t j = make (tag, icon);
+            jo_string (j, "name", name);
+            jo_string (j, "dev_cla", "humidity");
+            jo_string (j, "state_class", "measurement");
+            jo_string (j, "stat_t", hastatus);
+            jo_string (j, "unit_of_meas", "%");
+            jo_stringf (j, "val_tpl", "{{value_json.%s}}", tag);
+            revk_mqtt_send (NULL, 1, topic, &j);
+         }
+         free (topic);
+      }
+   }
    void addfreq (uint64_t ok, const char *tag, const char *name, const char *unit, const char *icon)
    {
       if (asprintf (&topic, "homeassistant/sensor/%s%s/config", revk_id, tag) >= 0)
@@ -2827,6 +2854,11 @@ send_ha_config (void)
       {
          jo_string (j, "curr_temp_t", hastatus);
          jo_string (j, "curr_temp_tpl", "{{value_json.temp}}");
+      }
+      if (daikin.status_known & CONTROL_hum)
+      {
+         jo_string (j, "curr_hum_t", hastatus);
+         jo_string (j, "curr_hum_tpl", "{{value_json.humidity}}");
       }
       if (daikin.status_known & CONTROL_mode)
       {
@@ -2903,6 +2935,7 @@ send_ha_config (void)
    addtemp ((daikin.status_known & CONTROL_home) && (daikin.status_known & CONTROL_inlet), "inlet", "Inlet", "mdi:thermometer");        // Both defined so we used home as temp, so lets add inlet here
    addtemp (daikin.status_known & CONTROL_outside, "outside", "Outside", "mdi:thermometer");
    addtemp (daikin.status_known & CONTROL_liquid, "liquid", "Liquid", "mdi:coolant-temperature");
+   addhum (daikin.status_known & CONTROL_hum, "hum", "Humidity", "mdi:water-percent");
    addfreq (daikin.status_known & CONTROL_comp, "comp", "Compressor", hacomprpm ? "rpm" : "Hz", "mdi:sine-wave");
    addfreq (daikin.status_known & CONTROL_fanrpm, "fanfreq", "Fan", hafanrpm ? "rpm" : "Hz", "mdi:fan");
    addswitch (haswitches && (daikin.status_known & CONTROL_power), "power", "Power", "mdi:power");
@@ -2914,26 +2947,6 @@ send_ha_config (void)
    addswitch (haswitches && (daikin.status_known & CONTROL_quiet), "quiet", "Quiet outdoor", "mdi:volume-minus");
    addswitch (haswitches && (daikin.status_known & CONTROL_econo), "econo", "Econo mode", "mdi:home-battery");
 #ifdef ELA
-   void addhum (uint64_t ok, const char *tag, const char *name, const char *icon)
-   {
-      if (asprintf (&topic, "homeassistant/sensor/%s%s/config", revk_id, tag) >= 0)
-      {
-         if (!ok)
-            revk_mqtt_send_str (topic);
-         else
-         {
-            jo_t j = make (tag, icon);
-            jo_string (j, "name", name);
-            jo_string (j, "dev_cla", "humidity");
-            jo_string (j, "state_class", "measurement");
-            jo_string (j, "stat_t", hastatus);
-            jo_string (j, "unit_of_meas", "%");
-            jo_stringf (j, "val_tpl", "{{value_json.%s}}", tag);
-            revk_mqtt_send (NULL, 1, topic, &j);
-         }
-         free (topic);
-      }
-   }
    void addbat (uint64_t ok, const char *tag, const char *name, const char *icon)
    {
       if (asprintf (&topic, "homeassistant/sensor/%s%s/config", revk_id, tag) >= 0)
@@ -3534,6 +3547,8 @@ app_main ()
                   poll (F, T,);
                if (s21extra)
                   poll (F, X, 60);   // Inside power (GX60)
+               if (s21extra)
+                  poll (R, e,); // Humidity
                //if(s21extra)poll (F, U, 02);
                //if(s21extra)poll (F, U, 04);
                
