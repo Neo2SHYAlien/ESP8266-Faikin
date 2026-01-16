@@ -3752,7 +3752,6 @@ app_main ()
             daikin.sample = 0;  // Start sample period
          }
 
-
          void controlstart (void)
          {                      // Start controlling
             if (daikin.control)
@@ -3807,8 +3806,14 @@ app_main ()
          }
          // END OF controlstop()
 
-
-         if ((auto0 || auto1) && (auto0 != auto1))
+         if (isnan (measured_temp) && measured_temp < frosttemp)
+         {                      // Power on hot if below frost level
+            if (!daikin.power)
+            {
+               daikin_set_v (power, 1);
+               daikin_set_e (mode, "H");
+            }
+         } else if ((auto0 || auto1) && (auto0 != auto1))
          {                      // Auto on/off, 00:00 is not considered valid, use 00:01. Also setting same on and off is not considered valid
             static int last = 0;
             time_t now = time (0);
