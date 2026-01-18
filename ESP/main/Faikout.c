@@ -3902,7 +3902,7 @@ app_main ()
 
          if (!isnan (measured_temp) && measured_temp < frosttemp)
          {                      // Power on hot if below frost level
-            if (!daikin.power)
+            if (!daikin.power || daikin.mode != FAIKIN_MODE_HEAT)
             {
                daikin_set_v (power, 1);
                daikin_set_e (mode, "H");
