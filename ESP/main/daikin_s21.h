@@ -66,7 +66,7 @@ s21_checksum (uint8_t * buf, int len)
       c += buf[i];
 
    // Special bytes are forbidden even as checksum bytes, they are promoted
-   if (c == STX || c == ETX || c == ACK)
+   if (c == STX || c == ETX || c == ACK || c == NAK)
       c += 2;
 
    return c;
@@ -83,6 +83,13 @@ static inline float
 s21_encode_target_temp (float temp)
 {
    return lroundf ((temp - 18.0) * 2) + AC_MIN_TEMP_VALUE;
+}
+
+static inline int
+s21_valid_int_sensor (const unsigned char *payload)
+{
+   return payload[0] >= '0' && payload[0] <= '9' && payload[1] >= '0' && payload[1] <= '9' && payload[2] >= '0'
+      && payload[2] <= '9';
 }
 
 static inline int
