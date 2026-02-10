@@ -3306,7 +3306,9 @@ revk_web_extra (httpd_req_t * req, int page)
    if (daikin.ha_sent)
       revk_web_setting_info (req, "Note, HA config sent (%s/…)", "homeassistant");
    else if (haenable)
-      revk_web_setting_info (req, "Note, HA config not yet sent%s", *mqtthost[0] ? "" : " (no MQTT config)");
+      revk_web_setting_info (req, "Note, HA config not yet sent%s%s%s%s", *mqtthost[0] ? "" : " (no MQTT config)",
+                             daikin.ha_send ? " (send pending)" : "", protocol_set ? "" : " (protocol not set)",
+                             daikin.talking ? "" : " (a/c not talking)");
    revk_web_setting (req, "Fahrenheit", "fahrenheit");
    revk_web_setting (req, "Text rather than icons", "noicons");
    revk_web_setting (req, "Home Assistant", "haenable");
