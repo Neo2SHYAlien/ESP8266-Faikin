@@ -2992,6 +2992,7 @@ send_ha_config (void)
    addswitch (haswitches && (daikin.status_known & CONTROL_sleep), "sleep", "Sleep mode", "mdi:bed");
    addswitch (haswitches && (daikin.status_known & CONTROL_quiet), "quiet", "Quiet outdoor", "mdi:volume-minus");
    addswitch (haswitches && (daikin.status_known & CONTROL_econo), "econo", "Econo mode", "mdi:home-battery");
+   addswitch (haswitches && (daikin.status_known & CONTROL_led), "led", "LED", "mdi:lightbulb");
 #ifdef ELA
    void addbat (uint64_t ok, const char *tag, const char *name, const char *icon)
    {
