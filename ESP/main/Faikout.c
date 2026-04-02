@@ -3442,7 +3442,8 @@ app_main ()
                poll (F, 7,);
                if (!s21.FY00.ack && !s21.F8.ack)
                   poll (F, 8,);      // One time static value
-               poll (F, 9,);
+               if (s21.RH.bad || s21.Ra.bad)
+                  poll (F, 9,); // Don't use F9 if we have RH and Ra
                if (s21extra)
                   poll (F, A,);
                if (s21extra)
@@ -3508,9 +3509,6 @@ app_main ()
                }
                if (!ok)
                   daikin.talking = 0;   // Not replying
-
-               if (!s21.RH.bad && !s21.Ra.bad)
-                  s21.F9.bad = 1;       // Don't use F9
                if (*debugsend)
                {
                   b.dumping = 1;        // Force dumping
