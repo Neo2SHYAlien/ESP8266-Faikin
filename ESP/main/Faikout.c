@@ -3094,6 +3094,16 @@ send_ha_config (void)
    addwh (daikin.status_known & CONTROL_Whheating, "energyheat", "Lifetime heating energy", NULL);
    addwh (daikin.status_known & CONTROL_Whcooling, "energycool", "Lifetime cooling energy", NULL);
 
+   if (asprintf (&topic, "homeassistant/sensor/%s%s/config", revk_id, "restart") >= 0)
+   {
+      jo_t j = make ("restart", NULL);
+      jo_string (j, "name", "Restart");
+      jo_string (j, "dev_cla", "restart");
+      jo_stringf (j, "cmd_t", "%s/%s", cmd, "restart");
+      jo_string (j, "payload_press", "");
+      revk_mqtt_send (NULL, 1, topic, &j);
+      free (topic);
+   }
    free (cmd);
    free (hastatus);
 }
