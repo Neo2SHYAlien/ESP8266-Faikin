@@ -37,7 +37,7 @@ bit	no.fanauto								// Do not control fan in faikin auto mode
 bit	no.homepreset								// Do not include a home in HA preset list
 bit	no.icons			.live=1					// Do not show icons on web UI
 
-bit udp_discovery                           // Enable Daikin BRP-compatible UDP discovery
+bit	udp.discovery			.old="udp_discovery",		// Enable Daikin BRP-compatible UDP discovery
 
 bit	ha.enable	1		.old="ha"				// Home Assistant
 bit	ha.switches								// Set additional HA switches
