@@ -130,6 +130,16 @@ const struct FanMode cn_wired_fans[] = {
 
 // We don't support pin inversion on 8266
 #define	PROTO_SCALE	1
+const char humidifymap[][6] = {     // Humidify per mode FHCA456D
+   "",                          // F
+   "089:\xFF",                  // H
+   "0:;<\xFF",                  // C
+   "",                          // A
+   "",                          // 4
+   "",                          // 5
+   "",                          // 6
+   "0:;<0",                     // D
+};
 
 // Globals
 struct
@@ -599,6 +609,11 @@ daikin_s21_response (const uint8_t * cmd_buf, int len, uint8_t * payload)
                report_bool (swingv, payload[0] & 1);
             if (!noswingh)
                report_bool (swingh, payload[0] & 2);
+            if (!nohumidify)
+            {
+               const char *o = strchr (humidifymap[daikin.mode & 7], payload[2]);
+               report_uint8 (humidify, o ? o - humidifymap[daikin.mode & 7] : 0);
+            }
          }
          break;
       case '6':                // 'G6' - "powerful" mode and some others
@@ -1836,7 +1851,8 @@ web_root (httpd_req_t * req)
       add ("Fan", "fan", "Low", "1", "Mid", "3", "High", "5", "Auto", "A", "Quiet", "Q", NULL);
    else
       add ("Fan", "fan", "Low", "1", "Mid", "3", "High", "5", NULL);
-   addslider ("Set", "temp", tmin, tmax, get_temp_step ());
+   if (!nohumidify)
+      add ("Hum", "humidify", "Off", "X", "Low", "L", "Std", "S", "High", "H", "Cont", "C", NULL);
    void addt (const char *tag, const char *help)
    {
       revk_web_send (req, "<td title=\"%s\" align=right>%s<br><span id=\"%s\"></span></td>", help, tag, tag);
@@ -3623,12 +3639,15 @@ app_main ()
                   daikin_s21_command ('D', '1', S21_PAYLOAD_LEN, temp);
                   xSemaphoreGive (daikin.mutex);
                }
-               if (daikin.control_changed & (CONTROL_swingh | CONTROL_swingv))
+               if (daikin.control_changed & (CONTROL_swingh | CONTROL_swingv | CONTROL_humidify))
                {                // D5
                   xSemaphoreTake (daikin.mutex, portMAX_DELAY);
                   temp[0] = '0' + (daikin.swingh ? 2 : 0) + (daikin.swingv ? 1 : 0) + (daikin.swingh && daikin.swingv ? 4 : 0);
                   temp[1] = (daikin.swingh || daikin.swingv ? '?' : '0');
-                  temp[2] = '0';
+                  if (!nohumidify && daikin.humidify < 5)
+                     temp[2] = humidifymap[daikin.mode & 7][daikin.humidify];
+                  else
+                     temp[2] = '0';
                   temp[3] = '0';
                   daikin_s21_command ('D', '5', S21_PAYLOAD_LEN, temp);
                   xSemaphoreGive (daikin.mutex);
