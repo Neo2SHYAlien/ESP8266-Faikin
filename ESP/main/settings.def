@@ -74,6 +74,8 @@ u8	cool.back	6		.live=1					// For cooling, pull (increase) target sent to airco
 s8	heat.over	6		.live=1					// For heating, push (increase) target sent to aircon by this from max to force heating before reaching target
 u8	heat.back	6		.live=1					// For heating, pull (decrease) target sent to aircon by this from min to stop heating after reaching target
 
+u8	fanrun				.live=1 .unit="min"			// Auto run fan after cool/dry
+
 s8	frosttemp	-100		.live=1 .unit="℃"			// Frost protect (below this, turn on hot regardless)
 
 bit	temp.track	0		.live=1					// Set target temp based on Daikin measured temp not required target
