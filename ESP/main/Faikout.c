@@ -967,7 +967,7 @@ daikin_x50a_response (uint8_t cmd, int len, uint8_t * payload)
    }
    if (cmd == 0xBA && len >= 20)
    {
-      strncpy (daikin.model, (char *) payload, sizeof (daikin.model));
+      snprintf (daikin.model, sizeof (daikin.model), "%s", (char *) payload);
       daikin.status_changed = 1;
       return;
    }
@@ -3383,7 +3383,7 @@ app_main ()
       daikin.mode = 1;
       daikin.temp = 20.0;
    }
-   strncpy (daikin.model, model, sizeof (daikin.model));        // Default model
+   snprintf (daikin.model, sizeof (daikin.model), "%s", model); // default model
    proto = protocol;
    if (protofix)
       protocol_set = 1;         // Fixed protocol - do not change
