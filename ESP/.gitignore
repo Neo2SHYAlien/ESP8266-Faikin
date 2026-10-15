@@ -8,5 +8,8 @@ managed_components
 *.bin
 !betarelease/*.bin
 !release/*.bin
+*.desc
+!betarelease/*.desc
+!release/*.desc
 settings.c
 settings.h
