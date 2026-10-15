@@ -96,6 +96,14 @@ Local interactive web control page using *hostname*.local, no app required, no e
 - [Setup](Manuals/Setup.md) Manual
 - [Advanced](Manuals/Advanced.md) Manual
 
+# Upstream sync
+
+This port follows [ESP32-Faikout](https://codeberg.org/RevK/ESP32-Faikout) (formerly ESP32-Faikin; the GitHub
+copy is frozen and development moved to Codeberg). The code is currently synced up to upstream `04452edb`
+(2024-10-05), and later upstream changes are being brought over in batches. Every such commit carries
+`Ported from upstream <sha>` in its message, and `Partial:` when only part of the upstream commit applies to
+this hardware (no BLE, no i2c sensors, ESP8266 instead of ESP32).
+
 # Building
 
 The build requires [ESP8266 RTOS SDK v3.x](https://docs.espressif.com/projects/esp8266-rtos-sdk/en/latest/)
